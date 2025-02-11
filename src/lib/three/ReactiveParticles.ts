@@ -1,8 +1,8 @@
-import * as THREE from "three";
-import gsap from "gsap";
-import vertex from "./shaders/vertex.glsl";
-import fragment from "./shaders/fragment.glsl";
 import type { GUI } from "dat.gui";
+import gsap from "gsap";
+import * as THREE from "three";
+import fragment from "./shaders/fragment.glsl";
+import vertex from "./shaders/vertex.glsl";
 
 interface Dependencies {
   holder: THREE.Object3D;
@@ -19,6 +19,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     size: number;
     autoMix: boolean;
     autoRotate: boolean;
+    randomColor: boolean;
   };
   private material: THREE.ShaderMaterial | any;
   private geometry?: THREE.BufferGeometry;
@@ -39,8 +40,9 @@ export default class ReactiveParticles extends THREE.Object3D {
       startColor: 0xff00ff,
       endColor: 0x00ffff,
       size: 1,
-      autoMix: true,
-      autoRotate: true,
+      autoMix: false,
+      autoRotate: false,
+      randomColor: false,
     };
   }
 
@@ -69,7 +71,7 @@ export default class ReactiveParticles extends THREE.Object3D {
     });
 
     this.addGUI();
-    this.resetMesh();
+    this.createCylinderMesh();
   }
 
   createBoxMesh() {
@@ -167,6 +169,102 @@ export default class ReactiveParticles extends THREE.Object3D {
     });
   }
 
+  createSphereMesh() {
+    // Create sphere with random segments for variety
+    let widthSeg = Math.floor(THREE.MathUtils.randInt(60, 120));
+    let heightSeg = Math.floor(THREE.MathUtils.randInt(60, 120));
+    this.geometry = new THREE.SphereGeometry(
+      1, // radius
+      widthSeg, // width segments
+      heightSeg, // height segments
+      0, // phiStart
+      Math.PI * 2, // phiLength
+      0, // thetaStart
+      Math.PI // thetaLength
+    );
+
+    // Set particle size similar to box mesh
+    this.material.uniforms.offsetSize.value = Math.floor(
+      THREE.MathUtils.randInt(30, 60)
+    );
+    this.material.needsUpdate = true;
+
+    // Create object hierarchy
+    this.pointsMesh = new THREE.Object3D();
+    this.pointsMesh.rotateX(Math.PI / 2);
+    this.pointsMesh.scale.set(
+      this.properties.size,
+      this.properties.size,
+      this.properties.size
+    );
+    this.holderObjects.add(this.pointsMesh);
+
+    // Create and add points mesh
+    const pointsMesh = new THREE.Points(this.geometry, this.material);
+    this.pointsMesh.add(pointsMesh);
+
+    // Add rotation animation
+    gsap.to(this.pointsMesh.rotation, {
+      duration: 3,
+      x: Math.random() * Math.PI,
+      z: Math.random() * Math.PI * 2,
+      ease: "none",
+    });
+
+    // Add position animation
+    gsap.to(this.position, {
+      duration: 0.6,
+      z: THREE.MathUtils.randInt(9, 11),
+      ease: "elastic.out(0.8)",
+    });
+  }
+
+  createTorusMesh() {
+    const radius = 1;
+    const tubeRadius = 0.4;
+    const radialSegments = Math.floor(THREE.MathUtils.randInt(32, 64));
+    const tubularSegments = Math.floor(THREE.MathUtils.randInt(192, 384));
+
+    this.geometry = new THREE.TorusGeometry(
+      radius,
+      tubeRadius,
+      radialSegments,
+      tubularSegments
+    );
+
+    this.material.uniforms.offsetSize.value = Math.floor(
+      THREE.MathUtils.randInt(20, 40)
+    );
+    this.material.needsUpdate = true;
+
+    this.pointsMesh = new THREE.Object3D();
+    this.pointsMesh.rotateX(Math.PI / 3);
+    this.pointsMesh.scale.set(
+      this.properties.size,
+      this.properties.size,
+      this.properties.size
+    );
+    this.holderObjects.add(this.pointsMesh);
+
+    const pointsMesh = new THREE.Points(this.geometry, this.material);
+    this.pointsMesh.add(pointsMesh);
+
+    // Add continuous rotation animation
+    gsap.to(this.pointsMesh.rotation, {
+      duration: 4,
+      x: Math.PI * 2,
+      z: Math.PI * 2,
+      repeat: -1,
+      ease: "none",
+    });
+
+    gsap.to(this.position, {
+      duration: 0.8,
+      z: THREE.MathUtils.randInt(9, 11),
+      ease: "elastic.out(1, 0.75)",
+    });
+  }
+
   onBPMBeat() {
     const duration = this.deps.bpmManager.getBPMDuration() / 1000;
 
@@ -185,15 +283,56 @@ export default class ReactiveParticles extends THREE.Object3D {
     }
   }
 
+  getRandomColor() {
+    return Math.floor(Math.random() * 16777215);
+  }
+
   resetMesh() {
     if (this.properties.autoMix) {
       this.destroyMesh();
-      if (Math.random() < 0.5) {
+
+      // Random number between 0 and 1
+      const random = Math.random();
+
+      // Split probability ranges for each mesh type
+      if (random < 0.25) {
         this.createCylinderMesh();
-      } else {
+      } else if (random < 0.5) {
         this.createBoxMesh();
+      } else if (random < 0.75) {
+        this.createSphereMesh();
+      } else {
+        this.createTorusMesh();
       }
 
+      if (this.properties.randomColor) {
+        // Generate new random colors
+        const newStartColor = this.getRandomColor();
+        const newEndColor = this.getRandomColor();
+
+      // Animate color changes
+      gsap.to(this.material.uniforms.startColor.value, {
+        duration: this.deps.bpmManager
+          ? (this.deps.bpmManager.getBPMDuration() / 1000) * 2
+          : 2,
+        r: ((newStartColor >> 16) & 255) / 255,
+        g: ((newStartColor >> 8) & 255) / 255,
+        b: (newStartColor & 255) / 255,
+        ease: "expo.easeInOut",
+      });
+
+      gsap.to(this.material.uniforms.endColor.value, {
+        duration: this.deps.bpmManager
+          ? (this.deps.bpmManager.getBPMDuration() / 1000) * 2
+          : 2,
+        r: ((newEndColor >> 16) & 255) / 255,
+        g: ((newEndColor >> 8) & 255) / 255,
+        b: (newEndColor & 255) / 255,
+          ease: "expo.easeInOut",
+        });
+      }
+
+      // Animate frequency change
       gsap.to(this.material.uniforms.frequency, {
         duration: this.deps.bpmManager
           ? (this.deps.bpmManager.getBPMDuration() / 1000) * 2
@@ -261,6 +400,7 @@ export default class ReactiveParticles extends THREE.Object3D {
   private addGUI() {
     const gui = this.deps.gui;
     const particlesFolder = gui.addFolder("PARTICLES");
+    const visualizerFolder = gui.addFolder("VISUALIZER");
 
     particlesFolder
       .addColor(this.properties, "startColor")
@@ -294,12 +434,15 @@ export default class ReactiveParticles extends THREE.Object3D {
       .add(this.material.uniforms.maxDistance, "value", 0.1, 5, 0.1)
       .name("Max Distance");
 
-    const visualizerFolder = gui.addFolder("VISUALIZER");
     visualizerFolder.add(this.properties, "autoMix").listen().name("Auto Mix");
     visualizerFolder
       .add(this.properties, "autoRotate")
       .listen()
       .name("Auto Rotate");
+    visualizerFolder
+      .add(this.properties, "randomColor")
+      .listen()
+      .name("Random Color");
 
     visualizerFolder
       .add(
@@ -326,6 +469,32 @@ export default class ReactiveParticles extends THREE.Object3D {
         "showCylinder"
       )
       .name("Show Cylinder");
+
+    visualizerFolder
+      .add(
+        {
+          showSphere: () => {
+            this.destroyMesh();
+            this.createSphereMesh();
+            this.properties.autoMix = false;
+          },
+        },
+        "showSphere"
+      )
+      .name("Show Sphere");
+
+    visualizerFolder
+      .add(
+        {
+          showTorus: () => {
+            this.destroyMesh();
+            this.createTorusMesh();
+            this.properties.autoMix = false;
+          },
+        },
+        "showTorus"
+      )
+      .name("Show Torus");
 
     visualizerFolder
       .add(this.properties, "size", 0.1, 5, 0.1)

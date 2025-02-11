@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as dat from "dat.gui";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import AudioManager, { Song } from "@/lib/managers/AudioManager.ts";
 import BPMManager from "@/lib/managers/BPMManager.ts";
 import ReactiveParticles from "@/lib/three/ReactiveParticles.ts";
@@ -15,6 +16,7 @@ export const useThreeVisualizer = () => {
   const audioManagerRef = useRef<AudioManager | any>(null);
   const bpmManagerRef = useRef<BPMManager | any>(null);
   const animationFrameRef = useRef<number>();
+  const controlsRef = useRef<OrbitControls | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
@@ -58,13 +60,39 @@ export const useThreeVisualizer = () => {
     // Initialize GUI
     guiRef.current = new dat.GUI({ autoPlace: true });
     guiRef.current.domElement.style.display = "none";
-  };
+
+    // Initialize OrbitControls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enableZoom = true;
+    controls.minDistance = 5;
+    controls.maxDistance = 20;
+    controls.enablePan = true;
+    controls.autoRotate = false;
+    controls.autoRotateSpeed = 2.0;
+    controlsRef.current = controls;
+
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+
+    // Add event listeners for right-click rotation
+    renderer.domElement.addEventListener("contextmenu", (e) => {
+      e.preventDefault(); // Prevent default right-click menu
+    });
+
+   }
+
+
+
 
   const createManagers = async () => {
     // Initialize Audio Manager
     audioManagerRef.current = new AudioManager();
     console.log(audioManagerRef.current);
-    //   audioManagerRef.current.initGUI(guiRef.current!);
     await audioManagerRef.current.loadAudioBuffer();
 
     // Initialize BPM Manager
@@ -86,6 +114,11 @@ export const useThreeVisualizer = () => {
 
   const update = () => {
     if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+
+    // Update OrbitControls
+    if (controlsRef.current) {
+      controlsRef.current.update();
+    }
 
     // Always update particles to maintain visual state
     particlesRef.current?.update();
@@ -126,7 +159,6 @@ export const useThreeVisualizer = () => {
     setIsPlaying(false);
   };
 
-  // Add this helper function to get current time
   const getCurrentTime = () => {
     if (!audioManagerRef.current?.audio) return 0;
     const audio = audioManagerRef.current.audio;
@@ -150,10 +182,20 @@ export const useThreeVisualizer = () => {
     }
   };
 
+  // Add method to toggle auto-rotation
+  const toggleAutoRotate = () => {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = !controlsRef.current.autoRotate;
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
       }
       guiRef.current?.destroy();
       rendererRef.current?.dispose();
@@ -174,5 +216,6 @@ export const useThreeVisualizer = () => {
     audio,
     getCurrentTime,
     toggleGui,
+    toggleAutoRotate, // Added new method
   };
 };
