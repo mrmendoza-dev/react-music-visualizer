@@ -56,7 +56,7 @@ export default class AudioManager {
     this.audioContext = null;
 
     this.currentSong = initialSong || {
-      url: "/src/data/crystal-teardrops.mp3",
+      url: "/music/crystal-teardrops.mp3",
       title: "Crystal Teardrops",
     };
   }
