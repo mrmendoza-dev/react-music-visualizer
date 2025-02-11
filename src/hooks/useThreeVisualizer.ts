@@ -63,8 +63,7 @@ export const useThreeVisualizer = () => {
   const createManagers = async () => {
     // Initialize Audio Manager
     audioManagerRef.current = new AudioManager();
-        audioManagerRef.current.initGUI(guiRef.current!);
-
+    //   audioManagerRef.current.initGUI(guiRef.current!);
     await audioManagerRef.current.loadAudioBuffer();
 
     // Initialize BPM Manager
@@ -89,7 +88,7 @@ export const useThreeVisualizer = () => {
 
     // Always update particles to maintain visual state
     particlesRef.current?.update();
-    
+
     // Only update audio manager when playing
     if (isPlaying) {
       audioManagerRef.current?.update();
@@ -97,7 +96,7 @@ export const useThreeVisualizer = () => {
 
     // Always render the scene
     rendererRef.current.render(sceneRef.current, cameraRef.current);
-    
+
     animationFrameRef.current = requestAnimationFrame(update);
   };
 
