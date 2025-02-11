@@ -337,5 +337,8 @@ export default class ReactiveParticles extends THREE.Object3D {
           this.pointsMesh.scale.set(value, value, value);
         }
       });
+
+    particlesFolder.open();
+    visualizerFolder.open();
   }
 }

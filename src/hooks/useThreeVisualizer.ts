@@ -1,7 +1,7 @@
-import * as dat from "dat.gui";
 import { useEffect, useRef, useState } from "react";
+import * as dat from "dat.gui";
 import * as THREE from "three";
-import AudioManager from "@/lib/managers/AudioManager.ts";
+import AudioManager, { Song } from "@/lib/managers/AudioManager.ts";
 import BPMManager from "@/lib/managers/BPMManager.ts";
 import ReactiveParticles from "@/lib/three/ReactiveParticles.ts";
 
@@ -16,8 +16,9 @@ export const useThreeVisualizer = () => {
   const bpmManagerRef = useRef<BPMManager | any>(null);
   const animationFrameRef = useRef<number>();
 
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [audio, setAudio] = useState<THREE.Audio | any>(null);
 
   const initThree = (container: HTMLDivElement) => {
     // Initialize renderer
@@ -55,14 +56,14 @@ export const useThreeVisualizer = () => {
     holderRef.current = holder;
 
     // Initialize GUI
-    guiRef.current = new dat.GUI();
-
-    setIsInitialized(true);
+    guiRef.current = new dat.GUI({ autoPlace: true });
+    guiRef.current.domElement.style.display = "none";
   };
 
   const createManagers = async () => {
     // Initialize Audio Manager
     audioManagerRef.current = new AudioManager();
+    console.log(audioManagerRef.current);
     //   audioManagerRef.current.initGUI(guiRef.current!);
     await audioManagerRef.current.loadAudioBuffer();
 
@@ -114,6 +115,8 @@ export const useThreeVisualizer = () => {
   const play = () => {
     if (!audioManagerRef.current) return;
     audioManagerRef.current.play();
+    setCurrentSong(audioManagerRef.current.currentSong);
+    setAudio(audioManagerRef.current.audio);
     setIsPlaying(true);
   };
 
@@ -123,11 +126,27 @@ export const useThreeVisualizer = () => {
     setIsPlaying(false);
   };
 
+  // Add this helper function to get current time
+  const getCurrentTime = () => {
+    if (!audioManagerRef.current?.audio) return 0;
+    const audio = audioManagerRef.current.audio;
+    return (
+      audio.context.currentTime - (audio._startedAt || 0) + (audio.offset || 0)
+    );
+  };
+
   const toggle = () => {
     if (isPlaying) {
       pause();
     } else {
       play();
+    }
+  };
+
+  const toggleGui = () => {
+    if (guiRef.current) {
+      guiRef.current.domElement.style.display =
+        guiRef.current.domElement.style.display === "none" ? "block" : "none";
     }
   };
 
@@ -147,10 +166,13 @@ export const useThreeVisualizer = () => {
     createManagers,
     update,
     handleResize,
-    isInitialized,
     isPlaying,
     play,
     pause,
     toggle,
+    currentSong,
+    audio,
+    getCurrentTime,
+    toggleGui,
   };
 };
