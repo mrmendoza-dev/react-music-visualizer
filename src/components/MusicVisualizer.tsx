@@ -32,6 +32,7 @@ export const MusicVisualizer = () => {
     audio,
     getCurrentTime,
     toggleGui,
+    isInitialized,
   } = useThreeVisualizer();
 
 useEffect(() => {
@@ -151,24 +152,45 @@ useEffect(() => {
   return (
     <div className="relative w-screen h-screen">
       <div ref={containerRef} className="w-full h-full absolute top-0 left-0" />
-      <div className="absolute bottom-0 left-0 right-0 bg-black/30 backdrop-blur-md z-50">
+
+      {!isInitialized && (
+        <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center">
+          <button
+            onClick={handleToggle}
+            disabled={isLoading}
+            className={`size-20 rounded-full flex items-center justify-center transition-colors border-2 border-indigo-500/70 bg-indigo-500/20 ${
+              isLoading
+                ? "bg-white/5 cursor-not-allowed"
+                : "bg-white/10 hover:bg-indigo-500/30"
+            }`}
+          >
+            {isLoading ? (
+              <div className="size-10 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+            ) : (
+              <Play className="size-10 text-white ml-0.5" />
+            )}
+          </button>
+        </div>
+      )}
+
+      <div className="absolute bottom-0 left-0 right-0 bg-black/10 backdrop-blur-md z-50">
         <div className="max-w-screen-xl mx-auto px-4 py-3">
           <div className="space-y-3">
-            {/* Time Slider */}
-            {isSetup && (
-              <div className="px-2">
-                <Slider
-                  defaultValue={[0]}
-                  value={[currentTime]}
-                  max={duration}
-                  step={0.1}
-                  onValueChange={handleSliderChange}
-                  onValueCommit={() => setIsDragging(false)}
-                  onPointerDown={() => setIsDragging(true)}
-                  className="w-full cursor-pointer"
-                />
-              </div>
-            )}
+
+            <div className="px-2 pt-1">
+              <Slider
+                disabled={!isInitialized}
+                defaultValue={[0]}
+                value={[currentTime]}
+                max={duration}
+                step={0.1}
+                onValueChange={handleSliderChange}
+                onValueCommit={() => setIsDragging(false)}
+                onPointerDown={() => setIsDragging(true)}
+                className="w-full cursor-pointer"
+              />
+            </div>
+            {/* )} */}
 
             {/* Controls */}
             <div className="flex items-center justify-between">

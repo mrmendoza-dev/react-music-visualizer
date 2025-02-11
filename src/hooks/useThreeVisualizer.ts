@@ -19,6 +19,7 @@ export const useThreeVisualizer = () => {
   const controlsRef = useRef<OrbitControls | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [audio, setAudio] = useState<THREE.Audio | any>(null);
 
@@ -110,6 +111,7 @@ export const useThreeVisualizer = () => {
       bpmManager: bpmManagerRef.current!,
     });
     particlesRef.current.init();
+    setIsInitialized(true);
   };
 
   const update = () => {
@@ -216,6 +218,7 @@ export const useThreeVisualizer = () => {
     audio,
     getCurrentTime,
     toggleGui,
-    toggleAutoRotate, // Added new method
+    toggleAutoRotate,
+    isInitialized,
   };
 };
